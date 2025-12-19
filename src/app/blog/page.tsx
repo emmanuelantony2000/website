@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { source } from "@/lib/source";
@@ -23,17 +23,24 @@ export default function BlogPage() {
       {pages.map((page, index) => {
         const isLatest = index === 0;
         const tags = page.data.tags ?? [];
-        const cover = page.data.image?.src ? "/blog/" + page.slugs.join("/") + "/" + page.data.image.src : undefined;
+        const cover = page.data.image?.src
+          ? "/blog/" + page.slugs.join("/") + "/" + page.data.image.src
+          : undefined;
 
         return (
           <Card
             key={page.url}
             className={cn(
-              "group relative overflow-hidden transition-colors hover:bg-muted/50",
+              "group relative overflow-hidden transition-[backdrop-filter] hover:backdrop-blur-xl bg-white/10 dark:bg-black/30 backdrop-blur-xs border border-white/20 dark:border-white/10 shadow-lg",
               isLatest && "md:col-span-2",
             )}
           >
-            <div className={cn("flex h-full flex-col gap-6 p-6", isLatest && "md:flex-row")}>
+            <div
+              className={cn(
+                "flex h-full flex-col gap-6 p-6",
+                isLatest && "md:flex-row",
+              )}
+            >
               {cover && (
                 <div
                   className={cn(
@@ -51,9 +58,19 @@ export default function BlogPage() {
                 </div>
               )}
 
-              <div className={cn("flex flex-1 flex-col gap-4", isLatest && "md:w-1/2 md:justify-center")}>
+              <div
+                className={cn(
+                  "flex flex-1 flex-col gap-4",
+                  isLatest && "md:w-1/2 md:justify-center",
+                )}
+              >
                 <div className="space-y-2">
-                  <h2 className={cn("font-semibold tracking-tight", isLatest ? "text-3xl md:text-4xl" : "text-2xl")}>
+                  <h2
+                    className={cn(
+                      "font-semibold tracking-tight",
+                      isLatest ? "text-3xl md:text-4xl" : "text-2xl",
+                    )}
+                  >
                     <Link
                       href={page.url}
                       className="after:absolute after:inset-0 focus:outline-none"

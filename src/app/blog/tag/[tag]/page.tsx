@@ -22,10 +22,8 @@ export default async function Page(props: {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {pages.map((page) => (
           <Link key={page.url} href={page.url} className="group">
-            <div className="flex flex-col gap-2 rounded-lg border p-4 transition-colors hover:bg-muted/50">
-              <h2 className="text-xl font-semibold group-hover:underline">
-                {page.data.title}
-              </h2>
+            <div className="flex flex-col gap-2 rounded-lg p-4 transition-[backdrop-filter] hover:backdrop-blur-xl bg-white/10 dark:bg-black/30 backdrop-blur-xs border border-white/20 dark:border-white/10 shadow-lg">
+              <h2 className="text-xl font-semibold">{page.data.title}</h2>
               <p className="text-muted-foreground line-clamp-2">
                 {page.data.description}
               </p>
@@ -49,7 +47,7 @@ export function generateStaticParams() {
   for (const page of source.getPages()) {
     if (page.data.tags) {
       for (const tag of page.data.tags) {
-        tags.add(tag);
+        tags.add(encodeURIComponent(tag));
       }
     }
   }
@@ -58,13 +56,15 @@ export function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ tag: string }>;
 }): Promise<Metadata> {
-  return params.then((p) => ({
-    title: `Posts tagged with ${decodeURIComponent(p.tag)}`,
-    description: `Browse blog posts tagged with ${decodeURIComponent(p.tag)}`,
-  }));
+  const { tag } = await params;
+
+  return {
+    title: `Posts tagged with ${decodeURIComponent(tag)}`,
+    description: `Browse blog posts tagged with ${decodeURIComponent(tag)}`,
+  };
 }
