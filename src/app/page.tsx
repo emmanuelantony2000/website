@@ -4,7 +4,7 @@ export default function Home() {
       <div className="flex-1 space-y-6">
         <div className="inline-flex items-center gap-3 rounded-full border border-border/50 bg-background/70 px-3 py-1 text-sm font-medium text-muted-foreground backdrop-blur">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Systems engineer
+          Systems Engineer
         </div>
 
         <div className="space-y-2">
@@ -15,9 +15,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl">
-            I build resilient systems and thoughtful developer tooling. Right
-            now, I&apos;m focused on reliable infrastructure, lean DX, and clear
-            technical storytelling.
+            I build resilient systems and thoughtful developer tooling.
           </p>
         </div>
 
