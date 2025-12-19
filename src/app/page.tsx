@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <section className="flex flex-col gap-10 p-6 xl:px-10 lg:flex-row lg:items-center">
@@ -20,12 +22,12 @@ export default function Home() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <a
+          <Link
             href="/blog"
             className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:shadow-md"
           >
             Read the blog
-          </a>
+          </Link>
           <a
             href="#contact"
             className="rounded-full border border-border px-5 py-2 text-sm font-medium transition hover:border-foreground/50"

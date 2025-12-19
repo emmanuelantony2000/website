@@ -13,7 +13,6 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +41,7 @@ export function Navbar() {
                 className={cn(
                   "flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
                   pathname === "/" &&
-                  "bg-accent text-accent-foreground shadow-sm",
+                    "bg-accent text-accent-foreground shadow-sm",
                 )}
               >
                 <Link href="/">Home</Link>
@@ -55,7 +54,7 @@ export function Navbar() {
                 className={cn(
                   "flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50",
                   pathname?.startsWith("/blog") &&
-                  "bg-accent text-accent-foreground shadow-sm",
+                    "bg-accent text-accent-foreground shadow-sm",
                 )}
               >
                 <Link href="/blog">Blog</Link>
