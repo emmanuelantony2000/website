@@ -25,7 +25,7 @@ export default function TagPage() {
       <h1 className="mb-8 text-3xl font-bold">All Tags</h1>
       <div className="flex flex-wrap gap-4">
         {tags.map(([tag, count]) => (
-          <Link key={tag} href={`/blog/tag/${tag}`}>
+          <Link key={tag} href={`/blog/tag/${encodeURIComponent(tag)}`}>
             <Badge className="text-lg px-4 py-2 hover:scale-105 transition-transform">
               {tag} ({count})
             </Badge>

@@ -18,7 +18,9 @@ export default async function Page(props: PageProps<"/blog/[...slug]">) {
   if (!page) notFound();
 
   const meta = page.data;
-  const image = meta.image?.src ? "/blog/" + page.slugs.join("/") + "/" + meta.image.src : undefined;
+  const image = meta.image?.src
+    ? "/blog/" + page.slugs.join("/") + "/" + meta.image.src
+    : undefined;
   const MDX = meta.body;
 
   return (
@@ -35,7 +37,7 @@ export default async function Page(props: PageProps<"/blog/[...slug]">) {
       {meta.tags && meta.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-8">
           {meta.tags.map((tag) => (
-            <Link key={tag} href={`/blog/tag/${tag}`}>
+            <Link key={tag} href={`/blog/tag/${encodeURIComponent(tag)}`}>
               <Badge variant="secondary" className="hover:bg-secondary/80">
                 {tag}
               </Badge>
@@ -75,22 +77,24 @@ export async function generateMetadata(
   const page = source.getPage(params.slug);
   if (!page) notFound();
   const meta = page.data;
-  const image = meta.image?.src ? "/blog/" + page.slugs.join("/") + "/" + meta.image.src : undefined;
+  const image = meta.image?.src
+    ? "/blog/" + page.slugs.join("/") + "/" + meta.image.src
+    : undefined;
 
   return {
     title: meta.title,
     description: meta.description,
     openGraph: image
       ? {
-        title: meta.title,
-        description: meta.description,
-        images: [
-          {
-            url: image,
-            alt: meta.image?.alt ?? meta.title,
-          },
-        ],
-      }
+          title: meta.title,
+          description: meta.description,
+          images: [
+            {
+              url: image,
+              alt: meta.image?.alt ?? meta.title,
+            },
+          ],
+        }
       : undefined,
   };
 }

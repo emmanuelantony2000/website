@@ -20,14 +20,15 @@ export function Navbar() {
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const { setOpenSearch } = useSearchContext();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const isDark = (resolvedTheme ?? theme) === "dark";
 
   useEffect(() => setMounted(true), []);
 
   const toggleTheme = () => {
     if (!mounted) return;
-    setTheme(theme === "dark" ? "light" : "dark");
+    setTheme(isDark ? "light" : "dark");
   };
 
   return (
@@ -83,7 +84,7 @@ export function Navbar() {
             className="flex items-center justify-center rounded-full p-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
             aria-label="Toggle theme"
           >
-            {mounted && theme === "dark" ? (
+            {mounted && isDark ? (
               <SunMedium className="h-4 w-4" />
             ) : (
               <Moon className="h-4 w-4" />

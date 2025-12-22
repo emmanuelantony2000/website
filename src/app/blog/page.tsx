@@ -88,7 +88,10 @@ export default function BlogPage() {
                 {tags.length > 0 && (
                   <div className="relative z-10 mt-auto flex flex-wrap gap-2">
                     {tags.map((tag) => (
-                      <Link key={tag} href={`/blog/tag/${tag}`}>
+                      <Link
+                        key={tag}
+                        href={`/blog/tag/${encodeURIComponent(tag)}`}
+                      >
                         <Badge
                           variant="secondary"
                           className="hover:bg-secondary/80 px-2.5 py-0.5"

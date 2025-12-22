@@ -51,6 +51,7 @@ export function generateStaticParams() {
       }
     }
   }
+
   return Array.from(tags).map((tag) => ({
     tag: tag,
   }));
