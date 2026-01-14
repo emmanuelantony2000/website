@@ -47,7 +47,7 @@ export function generateStaticParams() {
   for (const page of source.getPages()) {
     if (page.data.tags) {
       for (const tag of page.data.tags) {
-        tags.add(encodeURIComponent(tag));
+        tags.add(tag);
       }
     }
   }
