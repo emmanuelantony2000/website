@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
@@ -31,15 +30,6 @@ export default function RootLayout({
             SearchDialog,
           }}
         >
-          <Script
-            src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"
-            strategy="lazyOnload"
-          />
-          <Script
-            src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"
-            strategy="lazyOnload"
-          />
-
           <Bg />
 
           <div className="relative flex min-h-screen flex-col">
