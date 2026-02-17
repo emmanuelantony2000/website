@@ -1,0 +1,56 @@
+---
+import Base from "../../../layouts/Base.astro";
+import Badge from "../../../components/Badge.astro";
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  const tags = new Set<string>();
+
+  for (const post of posts) {
+    if (post.data.tags) {
+      for (const tag of post.data.tags) {
+        tags.add(tag);
+      }
+    }
+  }
+
+  return Array.from(tags).map((tag) => ({
+    params: { tag },
+    props: { tag },
+  }));
+}
+
+const { tag } = Astro.props;
+const allPosts = await getCollection("blog");
+const posts = allPosts.filter((post) => post.data.tags?.includes(tag));
+---
+
+<Base
+  title={`Posts tagged with ${tag}`}
+  description={`Browse blog posts tagged with ${tag}`}
+>
+  <div class="container py-12">
+    <h1 class="mb-8 text-3xl font-bold">Posts tagged with "{tag}"</h1>
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+      {posts.map((post) => {
+        const slug = post.id.replace(/\/index$/, "").replace(/\//g, "/");
+        return (
+          <a href={`/blog/${slug}`} class="group">
+            <div class="flex flex-col gap-2 rounded-lg p-4 transition-[backdrop-filter] hover:backdrop-blur-xl bg-white/10 dark:bg-black/30 backdrop-blur-xs border border-white/20 dark:border-white/10 shadow-lg">
+              <h2 class="text-xl font-semibold">{post.data.title}</h2>
+              <p class="text-muted-foreground line-clamp-2">
+                {post.data.description}
+              </p>
+              <div class="mt-2 flex gap-2">
+                {post.data.tags?.map((t) => (
+                  <Badge>{t}</Badge>
+                ))}
+              </div>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+</Base>

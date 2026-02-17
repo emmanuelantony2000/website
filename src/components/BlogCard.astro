@@ -1,0 +1,81 @@
+---
+import type { ImageMetadata } from "astro";
+import Badge from "./Badge.astro";
+import BlurImage from "./BlurImage.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  url: string;
+  tags?: string[];
+  cover?: ImageMetadata;
+  coverAlt?: string;
+  featured?: boolean;
+}
+
+const { title, description, url, tags = [], cover, coverAlt, featured = false } = Astro.props;
+---
+
+<div
+  class:list={[
+    "group relative overflow-hidden rounded-xl transition-[backdrop-filter] hover:backdrop-blur-xl bg-white/10 dark:bg-black/30 backdrop-blur-xs border border-white/20 dark:border-white/10 shadow-lg",
+    featured && "md:col-span-2",
+  ]}
+>
+  <div
+    class:list={[
+      "flex h-full flex-col gap-6 p-6",
+      featured && "md:flex-row",
+    ]}
+  >
+    {cover && (
+      <div
+        class:list={[
+          "relative aspect-video w-full overflow-hidden rounded-xl",
+          featured ? "md:order-last md:w-1/2 md:aspect-auto" : "aspect-[1.6]",
+        ]}
+      >
+        <BlurImage
+          src={cover}
+          alt={coverAlt ?? "Blog cover"}
+          imgClass="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      </div>
+    )}
+
+    <div
+      class:list={[
+        "flex flex-1 flex-col gap-4",
+        featured && "md:w-1/2 md:justify-center",
+      ]}
+    >
+      <div class="space-y-2">
+        <h2
+          class:list={[
+            "font-semibold tracking-tight",
+            featured ? "text-3xl md:text-4xl" : "text-2xl",
+          ]}
+        >
+          <a href={url} class="after:absolute after:inset-0 focus:outline-none">
+            {title}
+          </a>
+        </h2>
+        {description && (
+          <p class="text-muted-foreground md:text-lg text-base line-clamp-3">
+            {description}
+          </p>
+        )}
+      </div>
+
+      {tags.length > 0 && (
+        <div class="relative z-10 mt-auto flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <a href={`/blog/tag/${encodeURIComponent(tag)}`}>
+              <Badge>{tag}</Badge>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</div>

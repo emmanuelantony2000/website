@@ -1,0 +1,55 @@
+---
+import Base from "../layouts/Base.astro";
+import BlurImage from "../components/BlurImage.astro";
+import homeImage from "../assets/home.jpeg";
+---
+
+<Base>
+  <section class="flex flex-col gap-10 p-6 xl:px-10 lg:flex-row lg:items-center">
+    <div class="flex-1 space-y-6">
+      <div class="inline-flex items-center gap-3 rounded-full border border-border/50 bg-background/70 px-3 py-1 text-sm font-medium text-muted-foreground backdrop-blur">
+        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+        Systems Engineer
+      </div>
+
+      <div class="space-y-2">
+        <h1 class="text-4xl font-semibold leading-tight sm:text-5xl">
+          Emmanuel{" "}
+          <span class="text-muted-foreground text-2xl sm:text-3xl">
+            /ɛˈmænjuːəl/
+          </span>
+        </h1>
+        <p class="text-lg text-muted-foreground max-w-xl">
+          I build resilient systems and thoughtful developer tooling.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <a
+          href="/blog"
+          class="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:shadow-md"
+        >
+          Read the blog
+        </a>
+        <a
+          href="#contact"
+          class="rounded-full border border-border px-5 py-2 text-sm font-medium transition hover:border-foreground/50"
+        >
+          Contact me
+        </a>
+      </div>
+    </div>
+
+    <div class="relative flex-1">
+      <div class="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/10 via-transparent to-emerald-200/30 shadow-xl">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.08),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(59,130,246,0.12),transparent_40%)]"></div>
+        <BlurImage
+          src={homeImage}
+          alt="Portrait of Emmanuel"
+          class="relative"
+          imgClass="aspect-square w-full object-cover"
+        />
+      </div>
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,195 @@
+<!-- Search dialog with Pagefind integration -->
+<dialog
+  id="search-dialog"
+  class="fixed inset-0 z-50 m-0 h-full w-full max-w-full max-h-full bg-transparent p-0 backdrop:bg-black/50"
+>
+  <div class="flex h-full items-start justify-center pt-[15vh] px-4" id="search-backdrop">
+    <div
+      class="w-full max-w-lg rounded-xl border border-border bg-background shadow-2xl"
+      id="search-container"
+    >
+      <div class="flex items-center gap-3 border-b border-border px-4 py-3">
+        <svg class="h-4 w-4 shrink-0 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search..."
+          autocomplete="off"
+          class="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+        />
+        <kbd class="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          Esc
+        </kbd>
+      </div>
+      <div id="search-results" class="max-h-80 overflow-y-auto p-2">
+        <p class="px-2 py-8 text-center text-sm text-muted-foreground">
+          Type to search...
+        </p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script is:inline>
+  (function() {
+    var pagefind = null;
+
+    function setupSearch() {
+      var dialog = document.getElementById("search-dialog");
+      var input = document.getElementById("search-input");
+      var results = document.getElementById("search-results");
+      var backdrop = document.getElementById("search-backdrop");
+
+      if (!dialog || !input || !results || !backdrop) return;
+
+      async function loadPagefind() {
+        if (pagefind) return pagefind;
+        try {
+          pagefind = await import("/pagefind/pagefind.js");
+          await pagefind.init();
+        } catch (e) {
+          pagefind = null;
+        }
+        return pagefind;
+      }
+
+      function openSearch() {
+        dialog.showModal();
+        input.value = "";
+        results.innerHTML = '<p class="px-2 py-8 text-center text-sm text-muted-foreground">Type to search...</p>';
+        requestAnimationFrame(function() { input.focus(); });
+        loadPagefind();
+      }
+
+      function closeSearch() {
+        dialog.close();
+      }
+
+      function onKeydown(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+          e.preventDefault();
+          if (dialog.open) closeSearch();
+          else openSearch();
+        }
+      }
+
+      document.addEventListener("keydown", onKeydown);
+
+      backdrop.addEventListener("click", function(e) {
+        var container = document.getElementById("search-container");
+        if (container && !container.contains(e.target)) {
+          closeSearch();
+        }
+      });
+
+      dialog.addEventListener("close", function() {
+        input.value = "";
+      });
+
+      var timeout;
+      var activeIndex = -1;
+
+      input.addEventListener("input", function() {
+        clearTimeout(timeout);
+        var query = input.value.trim();
+
+        if (!query) {
+          results.innerHTML = '<p class="px-2 py-8 text-center text-sm text-muted-foreground">Type to search...</p>';
+          return;
+        }
+
+        timeout = setTimeout(async function() {
+          var pf = await loadPagefind();
+          if (!pf) {
+            results.innerHTML = '<p class="px-2 py-8 text-center text-sm text-muted-foreground">Search index not available. Run a build first.</p>';
+            return;
+          }
+
+          var search = await pf.search(query);
+          if (search.results.length === 0) {
+            results.innerHTML = '<p class="px-2 py-8 text-center text-sm text-muted-foreground">No results found.</p>';
+            return;
+          }
+
+          var items = await Promise.all(
+            search.results.slice(0, 8).map(function(r) { return r.data(); })
+          );
+
+          results.innerHTML = items
+            .map(function(item) {
+              var title = item.meta && item.meta.title ? item.meta.title : item.url;
+              var html = '<div class="mb-1">' +
+                '<a href="' + item.url + '" class="block rounded-lg px-3 py-2 hover:bg-accent transition-colors focus:bg-accent outline-none" data-search-result>' +
+                '<div class="text-sm font-medium text-foreground">' + title + '</div>' +
+                '</a>';
+
+              if (item.sub_results && item.sub_results.length > 0) {
+                item.sub_results.forEach(function(sub) {
+                  if (sub.url === item.url && sub.title === title) return;
+                  html += '<a href="' + sub.url + '" class="block rounded-lg px-3 py-1.5 pl-6 hover:bg-accent transition-colors focus:bg-accent outline-none" data-search-result>' +
+                    (sub.title ? '<div class="text-xs font-medium text-muted-foreground">' + sub.title + '</div>' : '') +
+                    '<div class="text-xs text-muted-foreground/70 line-clamp-2">' + sub.excerpt + '</div>' +
+                  '</a>';
+                });
+              }
+
+              html += '</div>';
+              return html;
+            })
+            .join("");
+
+          activeIndex = -1;
+        }, 200);
+      });
+
+      input.addEventListener("keydown", function(e) {
+        var items = results.querySelectorAll("[data-search-result]");
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          activeIndex = Math.min(activeIndex + 1, items.length - 1);
+          updateActive(items);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          activeIndex = Math.max(activeIndex - 1, -1);
+          updateActive(items);
+        } else if (e.key === "Enter" && activeIndex >= 0) {
+          e.preventDefault();
+          items[activeIndex].click();
+          closeSearch();
+        }
+      });
+
+      function updateActive(items) {
+        items.forEach(function(item, i) {
+          if (i === activeIndex) {
+            item.classList.add("bg-accent");
+            item.scrollIntoView({ block: "nearest" });
+          } else {
+            item.classList.remove("bg-accent");
+          }
+        });
+      }
+
+      // Store matched text on result click for highlight-on-navigate
+      results.addEventListener("click", function(e) {
+        var link = e.target.closest("[data-search-result]");
+        if (!link) return;
+        var marks = link.querySelectorAll("mark");
+        if (marks.length > 0) {
+          var text = Array.prototype.map.call(marks, function(m) { return m.textContent; }).join("");
+          if (text) sessionStorage.setItem("search-highlight", text);
+        }
+        closeSearch();
+      });
+
+      document.addEventListener("astro:before-swap", function() {
+        document.removeEventListener("keydown", onKeydown);
+      }, { once: true });
+    }
+
+    setupSearch();
+    document.addEventListener("astro:after-swap", setupSearch);
+  })();
+</script>

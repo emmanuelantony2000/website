@@ -1,0 +1,207 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+
+// Only show h2 and h3
+const filtered = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
+---
+
+{filtered.length > 0 && (
+  <nav class="sticky top-32 max-h-[calc(100vh-10rem)] overflow-y-auto" id="toc-nav">
+    <p class="mb-3 text-sm font-medium text-foreground">On this page</p>
+    <div class="relative">
+      <!-- Masked line with active marker -->
+      <div id="toc-line" class="absolute top-0 left-0 pointer-events-none bg-border"
+           style="width: 0; height: 0;">
+        <div id="toc-marker" class="bg-foreground transition-all duration-150"
+             style="margin-top: 0; height: 0;" />
+      </div>
+      <ul>
+        {filtered.map((heading) => (
+          <li>
+            <a
+              href={`#${heading.slug}`}
+              class:list={[
+                "toc-link block text-muted-foreground hover:text-foreground transition-colors",
+                heading.depth === 2 ? "ml-0 pl-4 py-2 text-sm" : "ml-3 pl-4 py-1.5 text-xs",
+              ]}
+              data-heading={heading.slug}
+              data-depth={heading.depth}
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+)}
+
+<script>
+  function buildTocLine(container: HTMLElement, links: NodeListOf<HTMLAnchorElement>) {
+    const lineEl = container.querySelector<HTMLElement>('#toc-line');
+    if (!lineEl || !links.length) return;
+
+    const d: string[] = [];
+    let w = 0, h = 0;
+
+    links.forEach((link, i) => {
+      const depth = parseInt(link.dataset.depth || '2');
+      const offset = (depth >= 3 ? 12 : 0) + 1;
+      const styles = getComputedStyle(link);
+      const top = link.offsetTop + parseFloat(styles.paddingTop);
+      const bottom = link.offsetTop + link.clientHeight - parseFloat(styles.paddingBottom);
+
+      w = Math.max(w, offset);
+      h = Math.max(h, bottom);
+
+      d.push(`${i === 0 ? 'M' : 'L'}${offset} ${top}`);
+      d.push(`L${offset} ${bottom}`);
+    });
+
+    const svgW = w + 1;
+    const svgData = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} ${h}'><path d='${d.join(' ')}' stroke='black' stroke-width='2' fill='none'/></svg>`;
+    const maskUrl = `url("data:image/svg+xml,${encodeURIComponent(svgData)}")`;
+
+    lineEl.style.width = svgW + 'px';
+    lineEl.style.height = h + 'px';
+    lineEl.style.maskImage = maskUrl;
+    lineEl.style.maskSize = `${svgW}px ${h}px`;
+    lineEl.style.maskRepeat = 'no-repeat';
+    lineEl.style.webkitMaskImage = maskUrl;
+    lineEl.style.webkitMaskSize = `${svgW}px ${h}px`;
+    lineEl.style.webkitMaskRepeat = 'no-repeat';
+  }
+
+  function setupToc() {
+    const tocNav = document.getElementById("toc-nav");
+    if (!tocNav) return;
+
+    const links = tocNav.querySelectorAll<HTMLAnchorElement>(".toc-link");
+    if (!links.length) return;
+
+    const headingSlugs = Array.from(links).map((l) => l.dataset.heading!);
+    const headingElements = headingSlugs
+      .map((slug) => document.getElementById(slug))
+      .filter(Boolean) as HTMLElement[];
+
+    if (!headingElements.length) return;
+
+    const activeSet = new Set<string>();
+
+    function updateThumb() {
+      // Find active links
+      let activeLinks: HTMLAnchorElement[] = [];
+
+      if (activeSet.size > 0) {
+        activeLinks = Array.from(links).filter(
+          (l) => activeSet.has(l.dataset.heading!)
+        );
+      }
+
+      // Fallback: find nearest heading above viewport
+      if (activeLinks.length === 0) {
+        const scrollY = window.scrollY + 120;
+        let nearest: string | null = null;
+        for (let i = headingElements.length - 1; i >= 0; i--) {
+          if (headingElements[i].offsetTop <= scrollY) {
+            nearest = headingSlugs[i];
+            break;
+          }
+        }
+        if (nearest) {
+          activeLinks = Array.from(links).filter(
+            (l) => l.dataset.heading === nearest
+          );
+        }
+      }
+
+      // Update link styles
+      links.forEach((l) => {
+        const isActive = activeLinks.includes(l);
+        l.classList.toggle("text-foreground", isActive);
+        l.classList.toggle("font-medium", isActive);
+        l.classList.toggle("text-muted-foreground", !isActive);
+      });
+
+      // Update marker position
+      const marker = tocNav.querySelector<HTMLElement>('#toc-marker');
+      if (!marker) return;
+
+      if (activeLinks.length > 0) {
+        const first = activeLinks[0];
+        const last = activeLinks[activeLinks.length - 1];
+        const firstStyles = getComputedStyle(first);
+        const lastStyles = getComputedStyle(last);
+        const top = first.offsetTop + parseFloat(firstStyles.paddingTop);
+        const bottom = last.offsetTop + last.clientHeight - parseFloat(lastStyles.paddingBottom);
+        marker.style.marginTop = top + 'px';
+        marker.style.height = (bottom - top) + 'px';
+      } else {
+        marker.style.height = '0';
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const slug = entry.target.id;
+          if (entry.isIntersecting) {
+            activeSet.add(slug);
+          } else {
+            activeSet.delete(slug);
+          }
+        });
+        updateThumb();
+      },
+      { threshold: 0.98, rootMargin: "-80px 0px -60% 0px" }
+    );
+
+    headingElements.forEach((el) => observer.observe(el));
+
+    // Also update on scroll for fallback behavior
+    let scrollTick = false;
+    function onScroll() {
+      if (!scrollTick) {
+        scrollTick = true;
+        requestAnimationFrame(() => {
+          updateThumb();
+          scrollTick = false;
+        });
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    // Build the continuous stepped border line
+    const tocContainer = tocNav.querySelector<HTMLElement>(".relative")!;
+    buildTocLine(tocContainer, links);
+
+    // Rebuild on resize
+    const resizeObserver = new ResizeObserver(() => {
+      buildTocLine(tocContainer, links);
+    });
+    resizeObserver.observe(tocContainer);
+
+    // Initial update
+    updateThumb();
+
+    // Cleanup
+    document.addEventListener("astro:before-swap", () => {
+      observer.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    }, { once: true });
+  }
+
+  setupToc();
+  document.addEventListener("astro:after-swap", setupToc);
+</script>

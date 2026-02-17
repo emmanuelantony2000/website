@@ -1,0 +1,56 @@
+---
+import type { ImageMetadata } from "astro";
+import Base from "./Base.astro";
+import Toc from "../components/Toc.astro";
+import Badge from "../components/Badge.astro";
+import BlurImage from "../components/BlurImage.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  tags?: string[];
+  image?: ImageMetadata;
+  imageAlt?: string;
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { title, description, tags = [], image, imageAlt, headings } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <div class="flex gap-10 max-w-6xl mx-auto">
+    <article class="flex-1 min-w-0">
+      <header class="mb-8">
+        <h1 class="text-3xl md:text-4xl font-semibold tracking-tight mb-3">{title}</h1>
+        <p class="text-muted-foreground text-lg">{description}</p>
+
+        {tags.length > 0 && (
+          <div class="flex flex-wrap gap-2 mt-4">
+            {tags.map((tag) => (
+              <a href={`/blog/tag/${encodeURIComponent(tag)}`}>
+                <Badge>{tag}</Badge>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {image && (
+          <BlurImage
+            src={image}
+            alt={imageAlt ?? title}
+            class="rounded-xl w-full mt-8"
+            imgClass="w-full"
+          />
+        )}
+      </header>
+
+      <div class="prose">
+        <slot />
+      </div>
+    </article>
+
+    <aside class="hidden xl:block w-56 shrink-0">
+      <Toc headings={headings} />
+    </aside>
+  </div>
+</Base>

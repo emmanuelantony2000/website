@@ -1,0 +1,96 @@
+---
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const links = [
+  { href: "/", label: "Home" },
+  { href: "/blog", label: "Blog" },
+];
+
+function isActive(href: string, path: string) {
+  if (href === "/") return path === "/";
+  return path.startsWith(href);
+}
+---
+
+<header class="fixed inset-x-0 bottom-4 top-auto z-40 w-full px-4 xl:sticky xl:top-4 xl:bottom-auto">
+  <div class="mx-auto flex w-fit items-center justify-center gap-1 rounded-full border border-border/40 bg-background/40 p-1 backdrop-blur-sm md:p-1.5">
+    <nav class="flex items-center gap-1">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          class:list={[
+            "flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+            isActive(link.href, currentPath) && "bg-accent text-accent-foreground shadow-sm",
+          ]}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="flex items-center gap-1 pl-1 md:pl-0">
+      <!-- Search trigger -->
+      <button
+        type="button"
+        id="search-trigger"
+        class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none"
+        aria-keyshortcuts="Meta+K Control+K"
+      >
+        <!-- Search icon (lucide) -->
+        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="hidden sm:inline">Search</span>
+        <span class="hidden rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground/80 sm:inline-block">
+          ⌘K
+        </span>
+      </button>
+
+      <!-- Theme toggle -->
+      <button
+        type="button"
+        id="theme-toggle"
+        class="flex items-center justify-center rounded-full p-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none"
+        aria-label="Toggle theme"
+      >
+        <!-- Moon icon (shown in light mode) -->
+        <svg class="h-4 w-4 dark:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <!-- Sun icon (shown in dark mode) -->
+        <svg class="h-4 w-4 hidden dark:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  function setupNavbar() {
+    const themeToggle = document.getElementById("theme-toggle");
+    const searchTrigger = document.getElementById("search-trigger");
+
+    if (themeToggle) {
+      themeToggle.addEventListener("click", () => {
+        const isDark = document.documentElement.classList.contains("dark");
+        if (isDark) {
+          document.documentElement.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        } else {
+          document.documentElement.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        }
+        document.dispatchEvent(new CustomEvent("theme-change"));
+      });
+    }
+
+    if (searchTrigger) {
+      searchTrigger.addEventListener("click", () => {
+        const dialog = document.getElementById("search-dialog");
+        if (dialog) dialog.showModal();
+      });
+    }
+  }
+
+  setupNavbar();
+  document.addEventListener("astro:after-swap", setupNavbar);
+</script>

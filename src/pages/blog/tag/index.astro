@@ -1,0 +1,31 @@
+---
+import Base from "../../../layouts/Base.astro";
+import Badge from "../../../components/Badge.astro";
+import { getCollection } from "astro:content";
+
+const posts = await getCollection("blog");
+
+const tagCounts = posts.reduce<Record<string, number>>((acc, post) => {
+  (post.data.tags ?? []).forEach((tag) => {
+    acc[tag] = (acc[tag] ?? 0) + 1;
+  });
+  return acc;
+}, {});
+
+const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+---
+
+<Base title="Emmanuel Antony | Blog by tag" description="Browse blog posts filtered by tags.">
+  <div class="container py-12">
+    <h1 class="mb-8 text-3xl font-bold">All Tags</h1>
+    <div class="flex flex-wrap gap-4">
+      {tags.map(([tag, count]) => (
+        <a href={`/blog/tag/${encodeURIComponent(tag)}`}>
+          <Badge variant="default" class="text-lg px-4 py-2 hover:scale-105 transition-transform">
+            {tag} ({count})
+          </Badge>
+        </a>
+      ))}
+    </div>
+  </div>
+</Base>
