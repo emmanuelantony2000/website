@@ -201,6 +201,15 @@ const {
           const vx = new Float32Array(cols * rows);
           const vy = new Float32Array(cols * rows);
 
+          // Pre-compute trig table — same angles for every cell
+          const cosTable = new Float32Array(NOISE_SAMPLES);
+          const sinTable = new Float32Array(NOISE_SAMPLES);
+          for (let s = 0; s < NOISE_SAMPLES; s++) {
+            const angle = (s / NOISE_SAMPLES) * Math.PI * 2;
+            cosTable[s] = Math.cos(angle) * NOISE_RADIUS;
+            sinTable[s] = Math.sin(angle) * NOISE_RADIUS;
+          }
+
           for (let i = 0; i < rows; i++) {
             for (let j = 0; j < cols; j++) {
               const cx = j * NOISE_SIZE;
@@ -212,9 +221,8 @@ const {
               let lowX = 0, lowY = 0;
 
               for (let s = 0; s < NOISE_SAMPLES; s++) {
-                const angle = (s / NOISE_SAMPLES) * Math.PI * 2;
-                const sx = cx + Math.cos(angle) * NOISE_RADIUS;
-                const sy = cy + Math.sin(angle) * NOISE_RADIUS;
+                const sx = cx + cosTable[s];
+                const sy = cy + sinTable[s];
                 const val = noise2d01(sx, sy);
 
                 if (val > highVal) { highVal = val; highX = sx; highY = sy; }
@@ -302,15 +310,33 @@ const {
           }
 
           let fg = hexToRgb(color);
-          let strokeStyle = `rgba(${fg.r},${fg.g},${fg.b},0.05)`;
           let animId = 0;
+          const c = ctx!;
+
+          // Set stroke style once — only update on theme change
+          function applyStroke() {
+            c.strokeStyle = `rgba(${fg.r},${fg.g},${fg.b},0.05)`;
+            c.lineWidth = 1;
+          }
+          applyStroke();
+
+          const { cols: fCols, rows: fRows, vx: fvx, vy: fvy } = field;
 
           function frame() {
-            ctx!.strokeStyle = strokeStyle;
-            ctx!.lineWidth = 1;
+            // Batch all lines into a single path — one stroke() call instead of 4500
+            c.beginPath();
 
             for (let i = 0; i < count; i++) {
-              const [fx, fy] = getFlow(field, px[i], py[i]);
+              // Inline getFlow — avoids 4500 tuple allocations per frame
+              const col = (px[i] / CELL_SIZE) | 0;
+              const row = (py[i] / CELL_SIZE) | 0;
+              let fx = 0, fy = 0;
+              if (col >= 0 && col < fCols && row >= 0 && row < fRows) {
+                const fi = row * fCols + col;
+                fx = fvx[fi];
+                fy = fvy[fi];
+              }
+
               const prevX = px[i];
               const prevY = py[i];
 
@@ -333,13 +359,12 @@ const {
               const ddx = px[i] - prevX;
               const ddy = py[i] - prevY;
               if (ddx * ddx + ddy * ddy < 100) {
-                ctx!.beginPath();
-                ctx!.moveTo(prevX, prevY);
-                ctx!.lineTo(px[i], py[i]);
-                ctx!.stroke();
+                c.moveTo(prevX, prevY);
+                c.lineTo(px[i], py[i]);
               }
             }
 
+            c.stroke();
             animId = requestAnimationFrame(frame);
           }
 
@@ -351,13 +376,13 @@ const {
             color = newColors.color;
             backgroundColor = newColors.backgroundColor;
             fg = hexToRgb(color);
-            strokeStyle = `rgba(${fg.r},${fg.g},${fg.b},0.05)`;
+            applyStroke();
 
             const nbg = hexToRgb(backgroundColor);
             const nw = canvas.width / dpr;
             const nh = canvas.height / dpr;
-            ctx!.fillStyle = `rgb(${nbg.r},${nbg.g},${nbg.b})`;
-            ctx!.fillRect(-OFFSET, -OFFSET, nw + OFFSET * 2, nh + OFFSET * 2);
+            c.fillStyle = `rgb(${nbg.r},${nbg.g},${nbg.b})`;
+            c.fillRect(-OFFSET, -OFFSET, nw + OFFSET * 2, nh + OFFSET * 2);
           }
 
           document.addEventListener("theme-change", onThemeChange);
@@ -365,15 +390,15 @@ const {
           // Save/restore canvas bitmap across View Transitions DOM swap
           let savedImageData: ImageData | null = null;
           document.addEventListener("astro:before-swap", () => {
-            savedImageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
+            savedImageData = c.getImageData(0, 0, canvas.width, canvas.height);
           });
           document.addEventListener("astro:after-swap", () => {
             if (savedImageData) {
-              ctx!.putImageData(savedImageData, 0, 0);
+              c.putImageData(savedImageData, 0, 0);
               savedImageData = null;
             }
-            ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx!.translate(-OFFSET, -OFFSET);
+            c.setTransform(dpr, 0, 0, dpr, 0, 0);
+            c.translate(-OFFSET, -OFFSET);
           });
 
           // Resize handler
@@ -387,12 +412,12 @@ const {
             canvas.height = nh * dpr;
             canvas.style.width = nw + "px";
             canvas.style.height = nh + "px";
-            ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx!.translate(-OFFSET, -OFFSET);
+            c.setTransform(dpr, 0, 0, dpr, 0, 0);
+            c.translate(-OFFSET, -OFFSET);
 
             const nbg = hexToRgb(backgroundColor);
-            ctx!.fillStyle = `rgb(${nbg.r},${nbg.g},${nbg.b})`;
-            ctx!.fillRect(-OFFSET, -OFFSET, nw + OFFSET * 2, nh + OFFSET * 2);
+            c.fillStyle = `rgb(${nbg.r},${nbg.g},${nbg.b})`;
+            c.fillRect(-OFFSET, -OFFSET, nw + OFFSET * 2, nh + OFFSET * 2);
           });
           observer.observe(document.documentElement);
 
