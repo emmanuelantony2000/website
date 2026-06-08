@@ -10,7 +10,6 @@
   "dependencies": {
     "@astrojs/mdx": "^4",
     "astro": "^5",
-    "mermaid": "^11.15.0",
     "sharp": "^0.34.5"
   },
   "devDependencies": {

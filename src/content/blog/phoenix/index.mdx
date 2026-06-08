@@ -17,13 +17,16 @@ image:
   alt: "Cover of the blog, which shows the logo of BuildBear Labs, and an illustration of Phoenix being a multi EVM node written in Rust which is extensible."
 ---
 
-import Mermaid from "../../../components/Mermaid.astro";
+import ArchitectureDiagram from "./ArchitectureDiagram.astro";
+import DatabaseDiagram from "./DatabaseDiagram.astro";
+import ForksDiagram from "./ForksDiagram.astro";
+import WorkerStealingDiagram from "./WorkerStealingDiagram.astro";
 
 At BuildBear Labs, we build high-performance testing environments for Web3 developers, especially developers working with smart contracts that need to be deployed and tested on-chain. Unlike regular server side software, subsequent changes, bug-fixes, and rollbacks cannot be done on smart contracts on chain once they are deployed. Of course you can use proxies for upgrading contracts, but that is usually reserved for larger protocol changes. Protocol users and other developers working on top of the protocols don't expect changes every now and then. This is the reason, why DeFi companies spend a lot of money on auditing and bug bounties before releasing it on the mainnet i.e. the production environment.
 
 ## The problem we are solving
 
-Web3 developers face a very serious problem. There is no proper testing (or staging) environment for smart contracts. I mean they can use their local Anvil node, but beyond that, if you want to test smart contracts in parallel with different sets of transactions, or present it to users with early access, it is a little hard to do. Our idea was simple, have a reproducible testing environment on the cloud. It should be very similar to the Ethereum mainnet or testnet, but different in ways that makes it a good testing environment, like forking from any chain with its entire state, loading accounts with as much balance as you want, having your own private explorer and debugger attached, forwarding time, disabling specific ETH RPC apis, taking snapshots (which are essentially like git commits that you usually revert after a few transactions or state changes) etc.
+Web3 developers face a very serious problem. There is no proper testing (or staging) environment for smart contracts. I mean they can use their local Anvil node, but beyond that, if you want to test smart contracts in parallel with different sets of transactions, or present it to users with early access, it is a little hard to do. Our idea is simple, have a reproducible testing environment on the cloud. It should be very similar to the Ethereum mainnet or testnet, but different in ways that makes it a good testing environment, like forking from any chain with its entire state, loading accounts with as much balance as you want, having your own private explorer and debugger attached, forwarding time, disabling specific ETH RPC apis, taking snapshots (which are essentially like git commits that you usually revert after a few transactions or state changes) etc.
 
 ## Our initial version
 
@@ -41,20 +44,7 @@ After this realization that this is not scalable and my obsession with optimizat
 
 I decided to keep the architecture simple; a gateway, a read layer for read ETH RPCs (such as eth_getBlockByNumber, eth_getBalance, etc.), a write layer for write ETH RPCs (such as eth_sendTransaction and eth_sendRawTransaction), and a queue layer that uses Kafka for ordering and processing transactions before mining. The stack still uses battle-tested Rust crates such as axum, Tokio, diesel, etc.
 
-<Mermaid
-  caption="Phoenix request flow: reads hit the database directly, while writes are ordered through Kafka before being persisted."
-  code={`flowchart TB
-      GATEWAY["Gateway"]
-
-      GATEWAY -->|"read RPC"| READ["Read layer"]
-      READ --> DB["Database"]
-
-      GATEWAY -->|"write RPC"| WRITE["Write layer"]
-      WRITE -->|"enqueue"| KAFKA["Kafka"]
-      KAFKA -->|"consume ordered transactions"| WRITER["Writer"]
-      WRITER --> DB
-  `}
-/>
+<ArchitectureDiagram />
 
 ### Database
 
@@ -64,43 +54,7 @@ Coming to the tables there's a `node` table to store the node IDs which is a uni
 
 Each table in the Postgres database has the node ID as the primary key or a part of the composite key. This is how we achieve node separation using a single database.
 
-<Mermaid code={`flowchart TB
-    READ["Read layer"]
-    REDIS["Redis cache"]
-
-    subgraph PG["Postgres database"]
-      NODE["node: readable ID to UUID"]
-
-      subgraph ACCOUNT["Account state"]
-        BALANCE["balance"]
-        NONCE["nonce"]
-        STORAGE["storage"]
-        CODE["code"]
-      end
-
-      subgraph HISTORY["Chain history"]
-        BLOCKS["blocks"]
-        TX["transactions"]
-        RECEIPTS["receipts"]
-        EVENTS["event logs"]
-      end
-
-      subgraph RUNTIME["Node metadata"]
-        SNAPSHOT["snapshot"]
-        FILTERS["websocket filters"]
-        UNLOCKED["unlocked accounts"]
-      end
-    end
-
-    READ --> REDIS
-    REDIS -->|"cache miss"| PG
-    NODE --> ACCOUNT
-    NODE --> HISTORY
-    NODE --> RUNTIME
-    BLOCKS --> TX
-    TX --> RECEIPTS
-    RECEIPTS --> EVENTS
-`} />
+<DatabaseDiagram />
 
 ### Read Layer
 
@@ -147,17 +101,7 @@ The feature I really wanted was forks of forks. Essentially when you create a Ph
 
 Forks of forks are interesting because you can build a chain of forks, and reads cascade through that chain. For example, let's set the list of nodes as the following:
 
-<Mermaid code={`flowchart LR
-    ETH[Ethereum Mainnet]
-
-    ETH -->|Fork @ 100| N1[Node 1]
-
-    N1 -->|Fork @ 110| N2[Node 2]
-
-    N2 -. account miss .-> N1
-    N1 -. account miss .-> CACHE[Mainnet Cache]
-    CACHE -. cache miss .-> ETH
-`} />
+<ForksDiagram />
 
 `Node 1` forks the `Ethereum Mainnet` at block `100`, and `Node 2` forks `Node 1` at block `110`. Keep in mind that `Node 1` can still mine blocks, and because Phoenix is archival `Node 2` can easily coexist. Now if you fetch an account and it is not available in `Node 2`, it can be found in `Node 1`, if not in `Node 1` then in the `Ethereum Mainnet` cache, and finally if not there it is fetched from the RPC and cached.
 
@@ -174,6 +118,8 @@ So let's assume we have 4 Kafka topics, and 4 executors inside the writer. The w
 ## Optimizations we did
 
 We quickly realized that a gateway service is not needed, so we combined both gateway and read layer to a lobby layer (lobby being the place you reach after crossing a gate). We got our main wins by extensive caching. It helps `eth_call` like requests especially because the number of database calls are variable unlike an `eth_getBalance` request. We also wrote our own scheduler to scale up the write layer even more. Our scheduler is essentially very similar to the work stealing Tokio scheduler, except it steals entire nodes. Nodes here mean entire pending transactions of a particular Phoenix node. So if an executor is sitting idle, then it can steal entire nodes, which is present in the queue of another worker, but which has not been started to process yet. Then of course database optimizations, like creating indexes, partitioning etc. We squeezed every bit of performance out of these services. Each service fully containerized is under 10 MB and startup is very fast. CPU usage is stable and predictable. Code updates became simpler, and database migrations became possible without disrupting every node.
+
+<WorkerStealingDiagram />
 
 At roughly one cent per node per month, Phoenix let us support 400k+ active testing nodes while keeping the AWS bill under $7k.
 

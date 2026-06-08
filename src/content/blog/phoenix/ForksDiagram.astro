@@ -1,0 +1,114 @@
+<figure class="phoenix-forks-diagram" aria-label="Phoenix forks of forks">
+    <section class="fork-row" aria-label="Fork chain">
+        <div class="chain-node root">Ethereum Mainnet</div>
+        <div class="arrow">Fork @ 100</div>
+        <div class="chain-node">Node 1</div>
+        <div class="arrow">Fork @ 110</div>
+        <div class="chain-node">Node 2</div>
+    </section>
+
+    <section class="miss-row" aria-label="Account miss lookup chain">
+        <div class="miss-node">Node 2</div>
+        <div class="miss-arrow">account miss</div>
+        <div class="miss-node">Node 1</div>
+        <div class="miss-arrow">account miss</div>
+        <div class="miss-node cache">Mainnet cache</div>
+        <div class="miss-arrow">cache miss</div>
+        <div class="miss-node root">Ethereum RPC</div>
+    </section>
+</figure>
+
+<style>
+    .phoenix-forks-diagram {
+        margin: 2rem 0;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: color-mix(in oklch, var(--background) 92%, var(--muted));
+        padding: 1rem;
+    }
+
+    .fork-row,
+    .miss-row {
+        display: grid;
+        align-items: center;
+        gap: 0.625rem;
+    }
+
+    .fork-row {
+        grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+    }
+
+    .miss-row {
+        grid-template-columns:
+            minmax(0, 1fr) max-content minmax(0, 1fr) max-content minmax(0, 1fr)
+            max-content minmax(0, 1fr);
+        margin-top: 1rem;
+        border-top: 1px dashed var(--border);
+        padding-top: 1rem;
+    }
+
+    .chain-node,
+    .miss-node {
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+        border-radius: 0.375rem;
+        background: color-mix(in oklch, var(--background) 72%, var(--muted));
+        color: var(--foreground);
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.15;
+        padding: 0 0.5rem;
+        text-align: center;
+    }
+
+    .root,
+    .cache {
+        border-color: color-mix(in oklch, var(--primary) 70%, var(--foreground));
+        background: color-mix(in oklch, var(--primary) 16%, var(--background));
+    }
+
+    .arrow,
+    .miss-arrow {
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .arrow::after,
+    .miss-arrow::after {
+        content: " →";
+    }
+
+    @media (max-width: 42rem) {
+        .phoenix-forks-diagram {
+            padding: 0.75rem;
+        }
+
+        .fork-row,
+        .miss-row {
+            grid-template-columns: 1fr;
+            gap: 0.375rem;
+        }
+
+        .miss-row {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+        }
+
+        .arrow::after,
+        .miss-arrow::after {
+            content: "";
+        }
+
+        .arrow::before,
+        .miss-arrow::before {
+            content: "↓ ";
+        }
+    }
+</style>
