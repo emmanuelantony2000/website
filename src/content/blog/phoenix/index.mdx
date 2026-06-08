@@ -1,0 +1,184 @@
+---
+title: "How we scaled to 400k+ active Ethereum testing nodes, under $7k AWS bill"
+description: "This blog talks about how we rebuilt and scaled our custom Ethereum testing node implementation written in Rust at BuildBear Labs"
+tags:
+  - Rust
+  - Ethereum
+  - Web3
+keywords:
+  - rust
+  - ethereum
+  - web3
+authors:
+  - Emmanuel Antony
+date: "2025-05-25"
+image:
+  src: ./cover.webp
+  alt: "Cover of the blog, which shows the logo of BuildBear Labs, and an illustration of Phoenix being a multi EVM node written in Rust which is extensible."
+---
+
+import Mermaid from "../../../components/Mermaid.astro";
+
+At BuildBear Labs, we build high-performance testing environments for Web3 developers, especially developers working with smart contracts that need to be deployed and tested on-chain. Unlike regular server side software, subsequent changes, bug-fixes, and rollbacks cannot be done on smart contracts on chain once they are deployed. Of course you can use proxies for upgrading contracts, but that is usually reserved for larger protocol changes. Protocol users and other developers working on top of the protocols don't expect changes every now and then. This is the reason, why DeFi companies spend a lot of money on auditing and bug bounties before releasing it on the mainnet i.e. the production environment.
+
+## The problem we are solving
+
+Web3 developers face a very serious problem. There is no proper testing (or staging) environment for smart contracts. I mean they can use their local Anvil node, but beyond that, if you want to test smart contracts in parallel with different sets of transactions, or present it to users with early access, it is a little hard to do. Our idea was simple, have a reproducible testing environment on the cloud. It should be very similar to the Ethereum mainnet or testnet, but different in ways that makes it a good testing environment, like forking from any chain with its entire state, loading accounts with as much balance as you want, having your own private explorer and debugger attached, forwarding time, disabling specific ETH RPC apis, taking snapshots (which are essentially like git commits that you usually revert after a few transactions or state changes) etc.
+
+## Our initial version
+
+We started this product out in 2022. That time there was a product that did things in the direction of what we wanted but locally. It was the Hardhat node. It was pretty good for running local tests and transactions. We tried to move it to the cloud. Essentially containerized, and each container being one node. So for each node created on our platform, we spawned a container. It could be spawned in a cluster in production or locally inside docker itself during development.
+
+But all was not happy and merry as soon we started to face issues. The first issue was that Hardhat node stored its entire state in memory, not on disk. Because of which for serious testing, we had to increase the default memory of Node.js from 4096MB to 8192MB. Integrating it with our Explorer UI was painful, as there was no internal APIs to attach it to. We had to either maintain an external database (easy but error prone), or modify its internals (pretty hard). And for some reason if it crashes, that entire node and its data is gone. We can technically recreate it, but again its not a good thing to do.
+
+On top of all of this, it is expensive. One machine with around 32GB RAM could only run four to six nodes, and I realized this would blow up at scale. There is also a load balancer responsible to route traffic to whichever container is being used, but the fact was, most of the machine was just sitting idle, and the entire large spec is to mitigate spikes and have a smoother experience.
+
+Our explorer and debuggers calls `debug_traceTransaction` RPC call multiple times, which is totally fine for small transactions such as `transfer` functions, but for a large transaction like a Uniswap swap it is just really bad, bad here means the processing takes too long, as the response can be multiple gigabytes, sometimes so long that the request times out. If it doesn't time out it might be so huge, that I had to change how JSON is converted to string in a response as the size limit of a Node.js string is 1GB.
+
+## Rethinking from the scratch
+
+After this realization that this is not scalable and my obsession with optimization, I decided that we have to own the entire stack. It was mid of 2023. During that time revm was getting the hype of being the most optimized and premier Ethereum vm stack, and ethers-rs was there as a really good "everything else" Ethereum crate. So I decided it was time for a complete write up from scratch. Of course it has to be in Rust.
+
+I decided to keep the architecture simple; a gateway, a read layer for read ETH RPCs (such as eth_getBlockByNumber, eth_getBalance, etc.), a write layer for write ETH RPCs (such as eth_sendTransaction and eth_sendRawTransaction), and a queue layer that uses Kafka for ordering and processing transactions before mining. The stack still uses battle-tested Rust crates such as axum, Tokio, diesel, etc.
+
+<Mermaid
+  caption="Phoenix request flow: reads hit the database directly, while writes are ordered through Kafka before being persisted."
+  code={`flowchart TB
+      GATEWAY["Gateway"]
+
+      GATEWAY -->|"read RPC"| READ["Read layer"]
+      READ --> DB["Database"]
+
+      GATEWAY -->|"write RPC"| WRITE["Write layer"]
+      WRITE -->|"enqueue"| KAFKA["Kafka"]
+      KAFKA -->|"consume ordered transactions"| WRITER["Writer"]
+      WRITER --> DB
+  `}
+/>
+
+### Database
+
+Let's talk about the database. We are using Postgres with a few tables. Requests hit Redis first; on a cache miss, data is loaded from Postgres and cached. Now for simplicity throughout the entire blog, I will be referring to this unit (Postgres + Redis) as the database.
+
+Coming to the tables there's a `node` table to store the node IDs which is a unique human readable string identifier mapped to a UUID. Then `balance`, `nonce`, `storage`, `code` tables to store Ethereum account details. Then we've got `transactions`, `receipts` and `blocks` tables to store the chain history. Along with this a `snapshot` table to store the snapshot number of a node, `event` table for logs, `filter` table for storing event filters passed through the websocket connection and `unlocked_account` table to map unlocked accounts for each node. There are other small tables for supporting other functions, but they are not important for this write-up.
+
+Each table in the Postgres database has the node ID as the primary key or a part of the composite key. This is how we achieve node separation using a single database.
+
+<Mermaid code={`flowchart TB
+    READ["Read layer"]
+    REDIS["Redis cache"]
+
+    subgraph PG["Postgres database"]
+      NODE["node: readable ID to UUID"]
+
+      subgraph ACCOUNT["Account state"]
+        BALANCE["balance"]
+        NONCE["nonce"]
+        STORAGE["storage"]
+        CODE["code"]
+      end
+
+      subgraph HISTORY["Chain history"]
+        BLOCKS["blocks"]
+        TX["transactions"]
+        RECEIPTS["receipts"]
+        EVENTS["event logs"]
+      end
+
+      subgraph RUNTIME["Node metadata"]
+        SNAPSHOT["snapshot"]
+        FILTERS["websocket filters"]
+        UNLOCKED["unlocked accounts"]
+      end
+    end
+
+    READ --> REDIS
+    REDIS -->|"cache miss"| PG
+    NODE --> ACCOUNT
+    NODE --> HISTORY
+    NODE --> RUNTIME
+    BLOCKS --> TX
+    TX --> RECEIPTS
+    RECEIPTS --> EVENTS
+`} />
+
+### Read Layer
+
+Full implementation took about two months. Gateway was just a proxy to the read and write layers. Read layers read from the database and return the results. Most read calls used to be a join between the node table and the subsequent table such as balance, nonce, code, etc. as the request comes as the human readable name and the ETH RPC. Something like this:
+
+```http
+POST /boring_octopus_888 HTTP/1.1
+Host: rpc.buildbear.io
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "eth_getBalance",
+  "params": [
+    "0xf898...89ad",
+    "latest"
+  ]
+}
+```
+
+Creating a node became as simple as:
+
+```http
+POST /this_is_a_new_node HTTP/1.1
+Host: rpc.buildbear.io
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "buildbear_internalCreateNode",
+  "params": []
+}
+```
+
+Now this specific internal call is written in the read layer, as there are no transactions which requires ordering. It is just one atomic write and that too creating a new node, which is again a single row entry in the database. This dropped our node creation time to under 100ms, as we didn't have to spin up a container like before.
+
+There are also some other differences that makes us closer to a full fledged node rather than just another testing node. I wanted us to be fully archival. An archival node will store each block state as a separate state, allowing us to revert to any block. Essentially in an archival node, each balance change (or state change) of a particular account is there. Other dev nodes such as Hardhat node and Anvil are not archival, they only store the current blockchain state, good for RAM based nodes, but snapshotting a state means, you copy the current state into a `Vec`, and keep on going till a revert comes where you pop the `Vec`. For Phoenix, being an archival node made snapshots, reverts, historical reads, and proof related workflows much easier to support.
+
+### Fork of Forks
+
+The feature I really wanted was forks of forks. Essentially when you create a Phoenix node, it can be two things, either it can be a fresh empty node (without any transactions) or a fork of another Phoenix node. This also solves the problem of chain forking, i.e. mainnet or testnet forking. Essentially Phoenix has a set of nodes, which are special nodes, which are nothing but caches. These special nodes represent the chains, and they have the node ID which represents the chain ID of the particular chain. All other Phoenix created node IDs have to be starting with a string. Whenever a database calls happen to any of these special nodes, if the data doesn't exist, Phoenix just fetches it externally from the RPC, and provides it.
+
+Forks of forks are interesting because you can build a chain of forks, and reads cascade through that chain. For example, let's set the list of nodes as the following:
+
+<Mermaid code={`flowchart LR
+    ETH[Ethereum Mainnet]
+
+    ETH -->|Fork @ 100| N1[Node 1]
+
+    N1 -->|Fork @ 110| N2[Node 2]
+
+    N2 -. account miss .-> N1
+    N1 -. account miss .-> CACHE[Mainnet Cache]
+    CACHE -. cache miss .-> ETH
+`} />
+
+`Node 1` forks the `Ethereum Mainnet` at block `100`, and `Node 2` forks `Node 1` at block `110`. Keep in mind that `Node 1` can still mine blocks, and because Phoenix is archival `Node 2` can easily coexist. Now if you fetch an account and it is not available in `Node 2`, it can be found in `Node 1`, if not in `Node 1` then in the `Ethereum Mainnet` cache, and finally if not there it is fetched from the RPC and cached.
+
+Now a chain of forks can be 100 forks long, yes they can be (I'll get to that) even longer, so I needed the performance to be constant and predictable. We cache the long chain of node UUID details and the block number ranges in the cache, and each query is made to Postgres with all the constraints. Again I'm aware there will be some performance difference based on the size of the chain of forks, but it was marginal for us, in all the stress testing we did.
+
+Forks of forks became a big feature because they also supported snapshots for us. Essentially when you take a snapshot in Phoenix, we create a fork of the original chain, and store the info in the snapshot table so we know which node to forward your request internally. If you revert we manage that again. And the cool thing is all your snapshots are alive and running. And this is exactly why we needed stable performance with fork of fork chains going to 100+ nodes, because sometimes a test might be huge with a lot of transactions, and it takes a snapshot after each transaction. This is primarily to increase the throughput of tests, and reduce the processing, when a test harness is trying to execute a combination of functions on a smart contract.
+
+Essentially every node in Phoenix is alive. Phoenix can scale depending on how many readers or writers you have.
+
+Oh yes, coming to the writers. Let me explain how it works. The plan is simple, transactions from different nodes can be executed in parallel, but transactions from a single node should only be executed serially. Kafka solved it partially for us, not that scalable for this specific use case as we can only have a set number of topics, I mean it is not optimized to dynamically scale up or down. Apache pulsar was another option but we stuck with Kafka for a while.
+
+So let's assume we have 4 Kafka topics, and 4 executors inside the writer. The writer is a multi threaded program, so you can have multiple executors, which can run independently. Now each node is assigned a particular topic, and all transactions for that node is passed onto that topic. The executor subscribes and keeps processing transactions one by one. Now even though there are 4 topics, 1 node will only use one topic, and multiple nodes might coexist in that topic. At scale, we noticed that one worker could drain its queue and sit idle while other workers kept processing long queues.
+
+## Optimizations we did
+
+We quickly realized that a gateway service is not needed, so we combined both gateway and read layer to a lobby layer (lobby being the place you reach after crossing a gate). We got our main wins by extensive caching. It helps `eth_call` like requests especially because the number of database calls are variable unlike an `eth_getBalance` request. We also wrote our own scheduler to scale up the write layer even more. Our scheduler is essentially very similar to the work stealing Tokio scheduler, except it steals entire nodes. Nodes here mean entire pending transactions of a particular Phoenix node. So if an executor is sitting idle, then it can steal entire nodes, which is present in the queue of another worker, but which has not been started to process yet. Then of course database optimizations, like creating indexes, partitioning etc. We squeezed every bit of performance out of these services. Each service fully containerized is under 10 MB and startup is very fast. CPU usage is stable and predictable. Code updates became simpler, and database migrations became possible without disrupting every node.
+
+At roughly one cent per node per month, Phoenix let us support 400k+ active testing nodes while keeping the AWS bill under $7k.
+
+We also wanted to bring in plugins, because we always wanted Phoenix to be extensible. Now with the plugin architecture, we've added many supporting internal RPCs so that explorer works out of the box, so does faucet with native and ERC20 tokens. We also have an option to run other explorers like Blockscout. We also support account abstraction services, other 3rd party debuggers, and AI powered code scanning services. We also run verification services such as Etherscan and Sourcify.
+
+We also run CI services, and Phoenix now supports most of the Foundry cheatcode space. Extending the EVM selectively per node is simple and fast. This enabled us to run Foundry tests outside of Foundry and giving our users a good experience debugging and viewing Foundry transactions outside of the CLI, especially when it is run in a headless CI.
+
+Phoenix brought down our cost, but without sacrificing performance. It made our service extensible. We are able to support even more nodes at a single time, and as the name suggests, no node can really die in Phoenix, so test as much as you want without worrying about crashes.
