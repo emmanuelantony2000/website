@@ -1,0 +1,159 @@
+---
+interface Props {
+    code: string;
+    caption?: string;
+}
+
+const { code, caption } = Astro.props;
+---
+
+<figure class="mermaid-diagram" data-mermaid-diagram>
+    <pre class="mermaid-source" data-mermaid-source><code>{code}</code></pre>
+    <div class="mermaid-output" data-mermaid-output hidden></div>
+    {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<script>
+    type MermaidWindow = Window & {
+        __mermaidComponentSetup?: boolean;
+        __mermaidTheme?: string;
+    };
+
+    const appWindow = window as MermaidWindow;
+    let mermaidModule: typeof import("mermaid").default | undefined;
+
+    async function loadMermaid() {
+        if (!mermaidModule) {
+            mermaidModule = (await import("mermaid")).default;
+        }
+
+        return mermaidModule;
+    }
+
+    function getMermaidTheme() {
+        return document.documentElement.classList.contains("dark")
+            ? "dark"
+            : "default";
+    }
+
+    function configureMermaid(mermaid: typeof import("mermaid").default) {
+        const theme = getMermaidTheme();
+        if (appWindow.__mermaidTheme === theme) return;
+
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: "strict",
+            theme,
+            flowchart: {
+                htmlLabels: false,
+                useMaxWidth: true,
+            },
+        });
+
+        appWindow.__mermaidTheme = theme;
+    }
+
+    async function renderMermaidDiagrams() {
+        const diagrams = document.querySelectorAll<HTMLElement>(
+            "[data-mermaid-diagram]:not([data-mermaid-rendered])",
+        );
+        if (!diagrams.length) return;
+
+        const mermaid = await loadMermaid();
+        configureMermaid(mermaid);
+
+        for (const [index, diagram] of diagrams.entries()) {
+            const source = diagram.querySelector<HTMLElement>(
+                "[data-mermaid-source]",
+            );
+            const output = diagram.querySelector<HTMLElement>(
+                "[data-mermaid-output]",
+            );
+            const code = source?.textContent?.trim();
+
+            if (!source || !output || !code) continue;
+
+            diagram.dataset.mermaidRendered = "true";
+
+            try {
+                const id = `mermaid-${Date.now()}-${index}`;
+                const { svg, bindFunctions } = await mermaid.render(id, code);
+                output.innerHTML = svg;
+                bindFunctions?.(output);
+                source.hidden = true;
+                output.hidden = false;
+            } catch (error) {
+                diagram.dataset.mermaidRendered = "error";
+                source.hidden = false;
+                output.hidden = true;
+                console.error("Failed to render Mermaid diagram", error);
+            }
+        }
+    }
+
+    function resetRenderedDiagrams() {
+        document
+            .querySelectorAll<HTMLElement>("[data-mermaid-diagram]")
+            .forEach((diagram) => {
+                delete diagram.dataset.mermaidRendered;
+                const source = diagram.querySelector<HTMLElement>(
+                    "[data-mermaid-source]",
+                );
+                const output = diagram.querySelector<HTMLElement>(
+                    "[data-mermaid-output]",
+                );
+                if (source) source.hidden = false;
+                if (output) {
+                    output.hidden = true;
+                    output.innerHTML = "";
+                }
+            });
+    }
+
+    renderMermaidDiagrams();
+
+    if (!appWindow.__mermaidComponentSetup) {
+        appWindow.__mermaidComponentSetup = true;
+
+        document.addEventListener("astro:page-load", renderMermaidDiagrams);
+        document.addEventListener("astro:after-swap", renderMermaidDiagrams);
+        document.addEventListener("theme-change", () => {
+            appWindow.__mermaidTheme = undefined;
+            resetRenderedDiagrams();
+            renderMermaidDiagrams();
+        });
+    }
+</script>
+
+<style>
+    .mermaid-diagram {
+        margin: 2rem 0;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        background: color-mix(in oklch, var(--background) 86%, var(--muted));
+        padding: 1rem;
+    }
+
+    .mermaid-source {
+        margin: 0;
+    }
+
+    .mermaid-output {
+        min-width: min(42rem, 100%);
+    }
+
+    .mermaid-output :global(svg) {
+        display: block;
+        height: auto;
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    figcaption {
+        margin-top: 0.75rem;
+        color: var(--muted-foreground);
+        font-size: 0.875rem;
+        text-align: center;
+    }
+</style>
