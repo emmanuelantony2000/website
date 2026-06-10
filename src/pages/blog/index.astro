@@ -13,7 +13,14 @@ posts.sort((a, b) => {
 });
 ---
 
-<Base title="Emmanuel Antony | Blog" description="Thoughts on systems engineering, tooling, and writing.">
+<Base
+  title="Emmanuel Antony | Blog"
+  description="Thoughts on systems engineering, tooling, and writing."
+  image="/og/blog.png"
+  imageAlt="Emmanuel's blog, with notes on Rust, distributed systems, and developer tooling."
+  imageWidth={1200}
+  imageHeight={630}
+>
   {posts.length === 0 ? (
     <p class="text-muted-foreground text-center py-12">No posts yet.</p>
   ) : (
@@ -29,6 +36,7 @@ posts.sort((a, b) => {
             tags={post.data.tags}
             cover={post.data.image?.src}
             coverAlt={post.data.image?.alt}
+            date={post.data.date}
             featured={index === 0}
           />
         );

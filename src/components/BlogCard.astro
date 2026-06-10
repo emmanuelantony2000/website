@@ -10,10 +10,18 @@ interface Props {
   tags?: string[];
   cover?: ImageMetadata;
   coverAlt?: string;
+  date?: string;
   featured?: boolean;
 }
 
-const { title, description, url, tags = [], cover, coverAlt, featured = false } = Astro.props;
+const { title, description, url, tags = [], cover, coverAlt, date, featured = false } = Astro.props;
+const dateLabel = date
+  ? new Intl.DateTimeFormat("en", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(`${date}T00:00:00Z`))
+  : undefined;
 ---
 
 <div
@@ -50,6 +58,14 @@ const { title, description, url, tags = [], cover, coverAlt, featured = false } 
       ]}
     >
       <div class="space-y-2">
+        {dateLabel && (
+          <time
+            datetime={date}
+            class="block text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
+          >
+            {dateLabel}
+          </time>
+        )}
         <h2
           class:list={[
             "font-semibold tracking-tight",

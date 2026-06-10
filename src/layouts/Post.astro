@@ -4,24 +4,57 @@ import Base from "./Base.astro";
 import Toc from "../components/Toc.astro";
 import Badge from "../components/Badge.astro";
 import BlurImage from "../components/BlurImage.astro";
+import portrait from "../assets/home.jpeg";
 
 interface Props {
   title: string;
   description: string;
   tags?: string[];
+  authors?: string[];
+  date?: string;
   image?: ImageMetadata;
   imageAlt?: string;
+  ogImage?: string;
   headings: { depth: number; slug: string; text: string }[];
 }
 
-const { title, description, tags = [], image, imageAlt, headings } = Astro.props;
+const { title, description, tags = [], authors = ["Emmanuel Antony"], date, image, imageAlt, ogImage, headings } = Astro.props;
+const authorName = authors[0] ?? "Emmanuel Antony";
+const dateLabel = date
+  ? new Intl.DateTimeFormat("en", {
+      dateStyle: "long",
+      timeZone: "UTC",
+    }).format(new Date(`${date}T00:00:00Z`))
+  : undefined;
 ---
 
-<Base title={title} description={description}>
+<Base
+  title={title}
+  description={description}
+  image={ogImage ?? image?.src}
+  imageAlt={ogImage ? title : imageAlt ?? title}
+  imageWidth={ogImage ? 1200 : image?.width}
+  imageHeight={ogImage ? 630 : image?.height}
+  type="article"
+>
   <div class="flex gap-10 max-w-6xl mx-auto">
     <article class="flex-1 min-w-0">
       <header class="mb-8">
         <h1 class="text-3xl md:text-4xl font-semibold tracking-tight mb-3">{title}</h1>
+        <div class="mb-3 flex items-center gap-3">
+          <img
+            src={portrait.src}
+            alt={authorName}
+            class="h-9 w-9 rounded-full border border-border object-cover grayscale"
+          />
+          <span class="text-sm font-medium text-muted-foreground">{authorName}</span>
+          {dateLabel && (
+            <>
+              <span class="h-1 w-1 rounded-full bg-muted-foreground/40" aria-hidden="true"></span>
+              <time class="text-sm text-muted-foreground" datetime={date}>{dateLabel}</time>
+            </>
+          )}
+        </div>
         <p class="text-muted-foreground text-lg">{description}</p>
 
         {tags.length > 0 && (
