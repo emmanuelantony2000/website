@@ -270,6 +270,41 @@ function mark() {
   );
 }
 
+type SocialIcon = "email" | "github" | "x" | "linkedin";
+
+const socialIconPaths: Record<Exclude<SocialIcon, "email">, string> = {
+  github:
+    "M12 1.5A10.5 10.5 0 0 0 8.7 22a.55.55 0 0 0 .73-.53v-1.9c-2.9.63-3.52-1.4-3.52-1.4-.48-1.2-1.16-1.53-1.16-1.53-.95-.65.07-.64.07-.64 1.05.07 1.6 1.08 1.6 1.08.94 1.6 2.45 1.14 3.05.87.1-.68.37-1.14.66-1.4-2.32-.27-4.76-1.16-4.76-5.16 0-1.14.41-2.07 1.07-2.8-.1-.27-.46-1.33.1-2.77 0 0 .88-.28 2.88 1.07a9.9 9.9 0 0 1 5.24 0c2-1.35 2.87-1.07 2.87-1.07.57 1.44.21 2.5.1 2.77.67.73 1.07 1.66 1.07 2.8 0 4.01-2.44 4.88-4.77 5.14.38.33.71.97.71 1.96v2.9c0 .29.2.62.74.52A10.5 10.5 0 0 0 12 1.5Z",
+  x: "M17.5 3h3l-7 8 8.2 10h-6.4l-5-6.1L7.8 21H4.7l7.4-8.5L4.2 3h6.5l4.5 5.6L17.5 3Zm-1.1 16h1.7L8.3 4.8H6.5L16.4 19Z",
+  linkedin:
+    "M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm6 0h3.8v1.7h.05c.53-.95 1.83-1.95 3.77-1.95 4.03 0 4.78 2.5 4.78 5.76V21h-4v-5.3c0-1.27-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9V9Z",
+};
+
+function socialIcon(name: SocialIcon, size: number, color: string) {
+  if (name === "email") {
+    return h(
+      "svg",
+      {
+        width: size,
+        height: size,
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: color,
+        strokeWidth: 1.8,
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+      },
+      h("rect", { x: 2.5, y: 4.5, width: 19, height: 15, rx: 2.5 }),
+      h("path", { d: "m3 6 9 6 9-6" }),
+    );
+  }
+  return h(
+    "svg",
+    { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+    h("path", { d: socialIconPaths[name] }),
+  );
+}
+
 function titleSize(title: string) {
   if (title.length > 76) return 60;
   if (title.length > 54) return 68;
@@ -579,11 +614,11 @@ export async function renderPostOg(post: OgPost) {
 
 export async function renderContactOg() {
   const portrait = await loadPortraitDataUri();
-  const links = [
-    "hello@emmanuelantony.com",
-    "github.com/emmanuelantony2000",
-    "@emmanuelantony5",
-    "in/emmanuel-antony",
+  const links: Array<{ label: string; icon: SocialIcon }> = [
+    { label: "hello@emmanuelantony.com", icon: "email" },
+    { label: "github.com/emmanuelantony2000", icon: "github" },
+    { label: "@emmanuelantony5", icon: "x" },
+    { label: "in/emmanuel-antony", icon: "linkedin" },
   ];
   return render(
     root(
@@ -650,6 +685,8 @@ export async function renderContactOg() {
               "div",
               {
                 style: {
+                  alignItems: "center",
+                  gap: 10,
                   borderRadius: 999,
                   border: `1px solid ${colors.borderStrong}`,
                   backgroundColor: colors.surface,
@@ -658,7 +695,8 @@ export async function renderContactOg() {
                   fontSize: 18,
                 },
               },
-              link,
+              socialIcon(link.icon, 20, colors.fgDim),
+              link.label,
             ),
           ),
         ),

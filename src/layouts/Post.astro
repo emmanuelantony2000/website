@@ -2,6 +2,7 @@
 import type { ImageMetadata } from "astro";
 import Base from "./Base.astro";
 import Toc from "../components/Toc.astro";
+import TocMobile from "../components/TocMobile.astro";
 import Badge from "../components/Badge.astro";
 import BlurImage from "../components/BlurImage.astro";
 import portrait from "../assets/home.jpeg";
@@ -76,6 +77,8 @@ const dateLabel = date
           />
         )}
       </header>
+
+      <TocMobile headings={headings} />
 
       <div class="prose">
         <slot />
