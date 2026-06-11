@@ -16,7 +16,7 @@ const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
 ---
 
 <Base title="Emmanuel Antony | Blog by tag" description="Browse blog posts filtered by tags.">
-  <div class="container py-12">
+  <div class="container py-12" data-pagefind-ignore>
     <h1 class="mb-8 text-3xl font-bold">All Tags</h1>
     <div class="flex flex-wrap gap-4">
       {tags.map(([tag, count]) => (

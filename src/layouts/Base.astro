@@ -2,7 +2,7 @@
 import "../styles/globals.css";
 import Navbar from "../components/Navbar.astro";
 import Search from "../components/Search.astro";
-import { ViewTransitions } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 
 interface Props {
   title?: string;
@@ -54,7 +54,7 @@ const imageUrl = image ? new URL(image, metadataBase).href : undefined;
         {imageAlt && <meta name="twitter:image:alt" content={imageAlt} />}
       </>
     )}
-    <ViewTransitions />
+    <ClientRouter />
     <!-- Search highlight: scroll to + highlight matched text from search -->
     <script is:inline>
       (function () {
@@ -341,7 +341,7 @@ const imageUrl = image ? new URL(image, metadataBase).href : undefined;
           let animId = 0;
           let animationStartedAt = 0;
           const c = ctx!;
-          const ANIMATION_DURATION_MS = 5500;
+          const ANIMATION_DURATION_MS = 3000;
 
           function applyStroke() {
             c.strokeStyle = `rgba(${fg.r},${fg.g},${fg.b},${lineAlpha})`;

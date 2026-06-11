@@ -8,16 +8,17 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4",
-    "astro": "^5",
-    "sharp": "^0.34.5"
+    "@astrojs/mdx": "^6.0.3",
+    "astro": "^6.4.6",
+    "sharp": "^0.35.0"
   },
   "devDependencies": {
     "@fontsource/inter": "^5.2.8",
     "@resvg/resvg-js": "^2.6.2",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.3.0",
+    "pagefind": "^1.5.2",
     "satori": "^0.26.0",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4.3.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

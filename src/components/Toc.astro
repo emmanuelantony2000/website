@@ -18,7 +18,7 @@ const filtered = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
 ---
 
 {filtered.length > 0 && (
-  <nav class="sticky top-32 max-h-[calc(100vh-10rem)] overflow-y-auto" id="toc-nav">
+  <nav class="sticky top-32 max-h-[calc(100vh-10rem)] overflow-y-auto" id="toc-nav" data-pagefind-ignore>
     <p class="mb-3 text-sm font-medium text-foreground">On this page</p>
     <TocList headings={filtered} />
   </nav>

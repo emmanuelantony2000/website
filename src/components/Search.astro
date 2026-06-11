@@ -1,11 +1,11 @@
 <!-- Search dialog with Pagefind integration -->
 <dialog
   id="search-dialog"
-  class="fixed inset-0 z-50 m-0 h-full w-full max-w-full max-h-full bg-transparent p-0 backdrop:bg-black/50"
+  class="fixed inset-0 z-50 m-0 h-full w-full max-w-full max-h-full bg-transparent p-0 backdrop:bg-black/55 backdrop:backdrop-blur-[6px]"
 >
   <div class="flex h-full items-start justify-center pt-[15vh] px-4" id="search-backdrop">
     <div
-      class="w-full max-w-lg rounded-xl border border-border bg-background shadow-2xl"
+      class="w-full max-w-lg rounded-xl border border-border bg-background/70 shadow-2xl backdrop-blur-xl"
       id="search-container"
     >
       <div class="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -30,6 +30,18 @@
   </div>
 </dialog>
 
+<style>
+  #search-dialog[open] #search-container {
+    animation: search-pop 0.16s ease;
+  }
+  @keyframes search-pop {
+    from {
+      transform: translateY(-8px) scale(0.985);
+      opacity: 0;
+    }
+  }
+</style>
+
 <script is:inline>
   (function() {
     var pagefind = null;
@@ -46,6 +58,9 @@
         if (pagefind) return pagefind;
         try {
           pagefind = await import("/pagefind/pagefind.js");
+          // Soften BM25 page-length normalization so long posts with a few
+          // mentions aren't buried below short pages (see Pagefind ranking docs)
+          await pagefind.options({ ranking: { pageLength: 0.1 } });
           await pagefind.init();
         } catch (e) {
           pagefind = null;
