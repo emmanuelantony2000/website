@@ -17,6 +17,8 @@ image:
   alt: "Cover of the blog, which shows a crab, a heart symbol, and a spider web."
 ---
 
+import { LinkPreview } from '@astro-community/astro-embed-link-preview';
+
 I have personally tried and seen various front-end frameworks for Web Apps in Rust. To be honest, they are pretty good and do their job well. But they do have some drawbacks, like a steep curve for understanding the API, and your code getting more complex as your app grows in size.
 
 Now when I see the JS side of things, I see easy adoption and usage. But nah, I'm a Rust fan.
@@ -164,4 +166,6 @@ Rust follows the principle of **Zero-cost abstractions**, i.e. you don't have to
 
 And comparing WASM with JS, after being received by the browser, your browser has to convert JS into an AST, compile the necessary functions and run it. Now, that's a lot of work. But in the case of WASM, your browser can directly run it using a JIT compiler, as your `.wasm` file is being received. Because a `.wasm` file is an optimised portable binary, the browser doesn't have to waste resources optimising it.
 
-Thank you for reading through the article and do take a look at [Valerie](https://github.com/emmanuelantony2000/valerie).
+Thank you for reading through the article and do take a look at Valerie.
+
+<LinkPreview id="https://github.com/emmanuelantony2000/valerie"/>

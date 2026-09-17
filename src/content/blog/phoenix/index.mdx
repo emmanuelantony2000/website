@@ -22,7 +22,7 @@ import DatabaseDiagram from "./DatabaseDiagram.astro";
 import ForksDiagram from "./ForksDiagram.astro";
 import WorkerStealingDiagram from "./WorkerStealingDiagram.astro";
 
-At BuildBear Labs, we build high-performance testing environments for Web3 developers, especially developers working with smart contracts that need to be deployed and tested on-chain. Unlike regular server side software, subsequent changes, bug-fixes, and rollbacks cannot be done on smart contracts on chain once they are deployed. Of course you can use proxies for upgrading contracts, but that is usually reserved for larger protocol changes. Protocol users and other developers working on top of the protocols don't expect changes every now and then. This is the reason, why DeFi companies spend a lot of money on auditing and bug bounties before releasing it on the mainnet i.e. the production environment.
+At BuildBear Labs, we build high-performance testing environments for Web3 developers, especially developers working with smart contracts that need to be deployed and tested on-chain. Unlike regular server side software, subsequent changes, bug-fixes, and rollbacks cannot be done on smart contracts that are deployed on chain. Of course you can use proxies for upgrading contracts, but that is usually reserved for larger protocol changes. Protocol users and other developers working on top of the protocols don't expect changes every now and then. This is the reason, why DeFi companies spend a lot of money on auditing and bug bounties before releasing it on the mainnet i.e. the production environment.
 
 ## The problem we are solving
 
@@ -111,7 +111,7 @@ Forks of forks became a big feature because they also supported snapshots for us
 
 Essentially every node in Phoenix is alive. Phoenix can scale depending on how many readers or writers you have.
 
-Oh yes, coming to the writers. Let me explain how it works. The plan is simple, transactions from different nodes can be executed in parallel, but transactions from a single node should only be executed serially. Kafka solved it partially for us, not that scalable for this specific use case as we can only have a set number of topics, I mean it is not optimized to dynamically scale up or down. Apache pulsar was another option but we stuck with Kafka for a while.
+Oh yes, coming to the writers. Let me explain how it works. The plan is simple, transactions from different nodes can be executed in parallel, but transactions from a single node should only be executed serially. Kafka solved it partially for us, not that scalable for this specific use case as we can only have a set number of topics, I mean it is not optimized to dynamically scale up or down. Apache Pulsar was another option but we stuck with Kafka for a while.
 
 So let's assume we have 4 Kafka topics, and 4 executors inside the writer. The writer is a multi threaded program, so you can have multiple executors, which can run independently. Now each node is assigned a particular topic, and all transactions for that node is passed onto that topic. The executor subscribes and keeps processing transactions one by one. Now even though there are 4 topics, 1 node will only use one topic, and multiple nodes might coexist in that topic. At scale, we noticed that one worker could drain its queue and sit idle while other workers kept processing long queues.
 

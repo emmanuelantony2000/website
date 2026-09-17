@@ -387,7 +387,6 @@ export async function renderHomeOg() {
               flex: 1,
             },
           },
-          badge("Systems Engineer", true),
           h(
             "div",
             {
