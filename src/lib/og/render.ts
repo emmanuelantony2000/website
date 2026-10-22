@@ -62,13 +62,13 @@ function h(
       (child) => child !== null && child !== undefined && child !== false,
     );
   const nextProps = { ...props };
-  if (type === "div") {
-    const style = (nextProps.style as OgStyle | undefined) ?? {};
-    nextProps.style = {
-      ...style,
-      display: style.display ?? "flex",
-    };
-  }
+  const style = (nextProps.style as OgStyle | undefined) ?? {};
+  nextProps.style = {
+    // Keep padding and borders inside the fixed-size social card layouts.
+    boxSizing: "border-box",
+    ...style,
+    ...(type === "div" ? { display: style.display ?? "flex" } : {}),
+  };
   return {
     type,
     props: {
