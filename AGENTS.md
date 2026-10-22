@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Personal portfolio and blog website built with Astro 5, TypeScript, and Tailwind CSS 4. Static site with near-zero JavaScript. Uses Astro content collections for blog posts and Pagefind for search.
+Personal portfolio and blog website built with Astro 7, TypeScript, and Tailwind CSS 4. Static site with near-zero JavaScript. Uses Astro content collections for blog posts and Pagefind for search.
 
 ## Commands
 
@@ -45,7 +45,7 @@ No testing or linting setup exists in this project.
 ### Configuration
 - Static output (Astro default)
 - Path alias: `@/*` maps to `./src/*`
-- PostCSS with `@tailwindcss/postcss`
+- Tailwind CSS with `@tailwindcss/vite`
 
 ### Styling
 - Tailwind CSS 4 with custom OKLch color theme in `src/styles/globals.css`

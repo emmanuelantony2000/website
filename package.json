@@ -2,6 +2,9 @@
   "name": "website",
   "version": "0.2.0",
   "private": true,
+  "engines": {
+    "node": ">=24.22.1"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && npx pagefind --site dist",
@@ -9,14 +12,14 @@
   },
   "dependencies": {
     "@astro-community/astro-embed-link-preview": "^0.3.1",
-    "@astrojs/mdx": "^6.0.3",
-    "astro": "^6.4.6",
+    "@astrojs/mdx": "^8.1.1",
+    "astro": "^7.4.2",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@fontsource/inter": "^5.3.0",
     "@resvg/resvg-js": "^2.6.2",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
     "pagefind": "^1.5.2",
     "satori": "^0.26.0",
     "tailwindcss": "^4.3.3"

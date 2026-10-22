@@ -1,5 +1,6 @@
 import { defineConfig } from "astro/config";
 import mdx from "@astrojs/mdx";
+import tailwindcss from "@tailwindcss/vite";
 
 function normalizeSite(url) {
   if (!url) return undefined;
@@ -16,5 +17,9 @@ const site = normalizeSite(
 
 export default defineConfig({
   site,
+  compressHTML: true,
   integrations: [mdx()],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });
